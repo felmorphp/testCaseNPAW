@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- npaw plugin -->
+    <script src="https://artifact.plugin.npaw.com/artifactory/plugins/js/7.2.2/NpawPlugin.js"></script>
+    <script src="https://artifact.plugin.npaw.com/artifactory/plugins/js/7.2.2/NpawPlugin-p2p.js"></script>
+    <!-- videojs -->
+    <script src="https://vjs.zencdn.net/8.9.0/video.min.js"></script>
+
+    <!-- internal style and videojs styles-->
+    <link href="https://vjs.zencdn.net/8.9.0/video-js.css" rel="stylesheet" />
+    <link rel="stylesheet" href="style/videoTest.css">
+    <title>NPTW TEST CASE</title>
+</head>
+<body>
+<div class="wrapper">
+    <header class="header">NPTW TEST CASE</header>
+    <aside class="sidebar">Options
+    <select id="bitRateOptionSelector" onchange="updateBitRatePlayer()">
+        <option id="rateOnBits" value="bits">Bits</option>
+        <option id="rateOnMegaBits" value="megabits">Megabits</option>
+    </select>
+    </aside>
+    <article class="content">
+        <h1>Video</h1>
+        <video
+                id="my-video"
+                class="video-js"
+                controls
+                preload="auto"
+                width="640"
+                height="264"
+                poster="images/frame.png"
+                data-setup="{}">
+            <source src="https://origin.demo.dev.codavel.com/hls/bigbuck/main.m3u8" type="application/x-mpegURL">
+            <p class="vjs-no-js">
+                To view this video please enable JavaScript, and consider upgrading to a
+                web browser that
+                <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+            </p>
+        </video>
+    </article>
+</div>
+</body>
+
+<footer class="footer" id="testCaseFooter" style="display: none">Number Total Reproductions last 6 hours :<span id="timesPlayed"></span> </footer>
+
+<script>
+    //declaration of type bit rates 1 for bits, 1000000 for Mb
+    const BITRATE_b = 1;
+    const BITRATE_Mb = 1000000;
+    let player = videojs('my-video');
+    function initializePlugin() {
+        /** initialize plugin **/
+        let npawPlugin = new NpawPlugin('powerce', 'dev');
+        npawPlugin.setLogLevel(LogLevel.DEBUG);
+        //define default bitrate in bits
+        let typeBitRate = BITRATE_b;
+        player.customPropertysPlayer = {'typeBitRate': typeBitRate};
+        console.log('access')
+        console.log(player.customPropertysPlayer['typeBitRate'])
+        npawPlugin.registerAdapter(player, 'js/qa-smartplugin.js.json');
+    }
+    //change value of player for show on bits or megabits
+    function updateBitRatePlayer(){
+        //get selected option and update player bitrate
+        let selectedBitRate = document.getElementById('bitRateOptionSelector').value;
+        if(selectedBitRate=='megabits')player.customPropertysPlayer['typeBitRate']= BITRATE_Mb;
+        if(selectedBitRate=='bits')player.customPropertysPlayer['typeBitRate']= BITRATE_b;
+    }
+    //call to internal api for get total plays from 6 hours ago to now and update
+    //this values on page
+    function requestNumberTimesPlayed() {
+        // Define the API URL
+        const apiUrl = 'api/getTotalPlaysLast6Hours.php';
+        const requestOptions = {
+            method: 'GET',
+        };
+        // Make a GET request
+        fetch(apiUrl)
+            .then( async (response) => {
+                console.log('fetched internal api')
+                // get json response here
+                let dataJson = await response.json();
+                let totalPlays = dataJson['totalPlays'];
+                console.log('totalPlays:'+totalPlays);
+                //inyect label
+                let spanNumberTimesPlayed = document.getElementById("timesPlayed");
+                spanNumberTimesPlayed.textContent = totalPlays;
+                let footerElement = document.getElementById("testCaseFooter");
+                footerElement.style ='display:show';
+            })
+            .catch((err) => {
+                console.log(err);
+            })
+    }
+    initializePlugin();
+    //just for fetch internal api and get number plays every 10 seconds for refresh data
+    const interval = setInterval(function() {
+        requestNumberTimesPlayed();
+    }, 10000);
+</script>
